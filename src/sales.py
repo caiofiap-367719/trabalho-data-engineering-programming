@@ -1,8 +1,14 @@
 import logging
 
-from pyspark.sql.functions import col, to_date, year
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, BooleanType
-
+from pyspark.sql.functions import col, to_timestamp, to_date, year
+from pyspark.sql.types import (
+    StructType,
+    StructField,
+    StringType,
+    DoubleType,
+    IntegerType,
+    BooleanType
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -15,12 +21,9 @@ class SalesService:
     def __init__(self, spark):
         self.spark = spark
 
-
     def generate_report(self, pedidos_path, pagamentos_path):
-
         try:
-
-            logging.info("Lendo dataset de pedidos")
+            logging.info("Iniciando leitura do dataset de pedidos")
 
             pedidos_schema = StructType([
                 StructField("ID_PEDIDO", StringType(), True),
@@ -40,24 +43,22 @@ class SalesService:
                 .csv(pedidos_path)
             )
 
-
-            pedidos = (
-                pedidos
-                .withColumn("valor_total", col("VALOR_UNITARIO") * col("QUANTIDADE"))
-                .withColumn("data_pedido", to_date(col("DATA_CRIACAO"), "yyyy-MM-dd'T'HH:mm:ss"))
-                .filter(year(col("data_pedido")) == 2025)
-                .withColumnRenamed("ID_PEDIDO", "id_pedido")
-                .withColumnRenamed("UF", "estado")
-            )
-
-
-            logging.info("Lendo dataset de pagamentos")
+            logging.info("Iniciando leitura do dataset de pagamentos")
 
             pagamentos_schema = StructType([
                 StructField("id_pedido", StringType(), True),
                 StructField("forma_pagamento", StringType(), True),
+                StructField("valor_pagamento", DoubleType(), True),
                 StructField("status", BooleanType(), True),
-                StructField("fraude", BooleanType(), True)
+                StructField("data_processamento", StringType(), True),
+                StructField(
+                    "avaliacao_fraude",
+                    StructType([
+                        StructField("fraude", BooleanType(), True),
+                        StructField("score", DoubleType(), True)
+                    ]),
+                    True
+                )
             ])
 
             pagamentos = (
@@ -66,19 +67,32 @@ class SalesService:
                 .json(pagamentos_path)
             )
 
+            logging.info("Aplicando transformações nos pedidos")
+
+            pedidos_transformados = (
+                pedidos
+                .withColumn("valor_total", col("VALOR_UNITARIO") * col("QUANTIDADE"))
+                .withColumn(
+                    "data_pedido",
+                    to_date(to_timestamp("DATA_CRIACAO", "yyyy-MM-dd'T'HH:mm:ss"))
+                )
+                .filter(year(col("data_pedido")) == 2025)
+                .withColumnRenamed("ID_PEDIDO", "id_pedido")
+                .withColumnRenamed("UF", "estado")
+            )
+
+            logging.info("Filtrando pagamentos recusados e legítimos")
 
             pagamentos_filtrados = pagamentos.filter(
                 (col("status") == False) &
-                (col("fraude") == False)
+                (col("avaliacao_fraude.fraude") == False)
             )
 
+            logging.info("Realizando join entre pedidos e pagamentos")
 
-            df_final = (
-                pedidos.join(
-                    pagamentos_filtrados,
-                    "id_pedido",
-                    "left"
-                )
+            relatorio = (
+                pedidos_transformados
+                .join(pagamentos_filtrados, "id_pedido", "inner")
                 .select(
                     "id_pedido",
                     "estado",
@@ -86,21 +100,13 @@ class SalesService:
                     "valor_total",
                     "data_pedido"
                 )
-                .orderBy(
-                    "estado",
-                    "forma_pagamento",
-                    "data_pedido"
-                )
+                .orderBy("estado", "forma_pagamento", "data_pedido")
             )
-
 
             logging.info("Relatório gerado com sucesso")
 
-            return df_final
-
+            return relatorio
 
         except Exception as e:
-
-            logging.error(f"Erro na geração do relatório: {str(e)}")
-
+            logging.error(f"Erro na geração do relatório: {e}")
             raise
