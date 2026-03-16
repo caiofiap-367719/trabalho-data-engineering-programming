@@ -1,6 +1,6 @@
 import logging
 
-from pyspark.sql.functions import col, to_date
+from pyspark.sql.functions import col, to_date, year
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, BooleanType
 
 
@@ -45,6 +45,7 @@ class SalesService:
                 pedidos
                 .withColumn("valor_total", col("VALOR_UNITARIO") * col("QUANTIDADE"))
                 .withColumn("data_pedido", to_date(col("DATA_CRIACAO"), "yyyy-MM-dd'T'HH:mm:ss"))
+                .filter(year(col("data_pedido")) == 2025)   # ⭐ FILTRO DO ANO
                 .withColumnRenamed("ID_PEDIDO", "id_pedido")
                 .withColumnRenamed("UF", "estado")
             )
