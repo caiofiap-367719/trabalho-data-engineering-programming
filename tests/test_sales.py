@@ -1,6 +1,17 @@
+from pyspark.sql import SparkSession
 from src.sales import SalesService
 
 
-def test_service_exists():
+def test_sales_service_creation():
+    spark = (
+        SparkSession.builder
+        .master("local[1]")
+        .appName("test")
+        .getOrCreate()
+    )
 
-    assert SalesService is not None
+    service = SalesService(spark)
+
+    assert service is not None
+
+    spark.stop()

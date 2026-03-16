@@ -1,0 +1,7 @@
+include README.md
+include requirements.txt
+include pyproject.toml
+recursive-include config *.py
+recursive-include orchestrator *.py
+recursive-include src *.py
+recursive-include tests *.py

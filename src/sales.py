@@ -109,4 +109,8 @@ class SalesService:
 
         except Exception as e:
             logging.error(f"Erro na geração do relatório: {e}")
+<<<<<<< HEAD
             raise
+=======
+            raise
+>>>>>>> f2b5a3f (ajusta filtros do relatório de vendas e adiciona arquivos de empacotamento)

@@ -1,23 +1,17 @@
-from src.sales import SalesService
-
-
 class Pipeline:
 
-    def __init__(self, spark, config):
-
-        self.spark = spark
+    def __init__(self, sales_service, config):
+        self.sales_service = sales_service
         self.config = config
 
-
     def run(self):
-
-        service = SalesService(self.spark)
-
-        df = service.generate_report(
+        df = self.sales_service.generate_report(
             self.config.pedidos_path,
             self.config.pagamentos_path
         )
 
-        df.write.mode("overwrite").parquet(
-            self.config.output_path
+        (
+            df.write
+            .mode("overwrite")
+            .parquet(self.config.output_path)
         )
