@@ -45,7 +45,7 @@ class SalesService:
                 pedidos
                 .withColumn("valor_total", col("VALOR_UNITARIO") * col("QUANTIDADE"))
                 .withColumn("data_pedido", to_date(col("DATA_CRIACAO"), "yyyy-MM-dd'T'HH:mm:ss"))
-                .filter(year(col("data_pedido")) == 2025)   # ⭐ FILTRO DO ANO
+                .filter(year(col("data_pedido")) == 2025)
                 .withColumnRenamed("ID_PEDIDO", "id_pedido")
                 .withColumnRenamed("UF", "estado")
             )
